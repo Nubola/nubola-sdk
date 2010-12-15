@@ -1,0 +1,84 @@
+#! /bin/bash
+#
+# chkconfig: 345 99 15
+# description: xmlBlaster subscriber daemon to dispatch messages to other applications
+#
+
+APP_NAME="Subscriber"
+SUBSCRIBER_PATH="/usr/sbin/subscriber"
+
+getpid() {
+   pid=`ps aux | egrep "subscribe MOM" | egrep -v "egrep" | awk '{print $2;}' | xargs` 
+}
+
+start() {
+    getpid
+    if [ "X$pid" == "X" ]
+    then
+        echo "Starting $APP_NAME..."
+        cd $SUBSCRIBER_PATH
+        ruby ./script/subscribe MOM=xmlblaster &> ./log/output.log &
+    else
+        echo "$APP_NAME is running ($pid)."
+        exit 1
+    fi
+}
+
+stop() {
+    getpid
+    if [ "X$pid" == "X" ]
+    then
+        echo "$APP_NAME is not running."
+    else
+        echo "Stopping $APP_NAME ..."
+        kill -INT $pid &> /dev/null
+    fi
+}
+
+status() {
+    getpid
+    if [ "X$pid" == "X" ]
+    then
+        echo "$APP_NAME is not running."
+        exit 1
+    else
+        echo "$APP_NAME is running ($pid)."
+    fi
+}
+
+case "$1" in
+
+    'start')
+        start
+        ;;
+
+    'stop')
+        stop
+        ;;
+
+    'restart')
+        stop
+        getpid
+        while [ "X$pid" != "X" ]
+        do
+          echo "Waiting $APP_NAME stops."
+          sleep 2
+          getpid
+        done
+        start
+        ;;
+
+    'status')
+        status
+        ;;
+
+    *)
+        echo "Usage: $0 { start | stop | restart | status }"
+        exit 1
+        ;;
+esac
+
+exit 0
+
+#
+

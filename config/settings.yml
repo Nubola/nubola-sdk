@@ -1,0 +1,6 @@
+development:
+  # setting: value
+  # The line above makes possible to access the setting
+  # in the Adaptor class with: $config["setting"]
+test:
+  # setting: test value

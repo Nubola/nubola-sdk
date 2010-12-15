@@ -1,0 +1,40 @@
+#!/usr/bin/ruby
+
+$:.unshift(File.dirname(__FILE__) + '/../lib')
+
+require "adaptation"
+
+args = ARGV
+#mom = "druby"
+mom = "xmlblaster"
+ARGV.each do |arg|
+  if arg[0..3] == "MOM="
+    mom = arg[4..arg.length]
+    args = ARGV.reject{|p| p == "MOM=#{mom}"}
+  end
+end
+
+require 'yaml'
+config = YAML::load(File.open("#{ADAPTOR_ROOT}/config/mom.yml"))[mom]
+
+case mom
+  when "druby"
+    require 'drb'
+
+    mom_uri = "druby://#{config["mom"]["host"]}:#{config["mom"]["port"]}"
+
+    mom = DRbObject.new(nil, mom_uri)
+    mom.publish ARGV[1], ARGV[0]
+
+  when "xmlblaster"
+    require "rubygems"
+    require "adaptation"
+    require "adaptation/xmlblaster/xmlblaster_client"
+
+    xbc = XmlblasterClient.new(config["mom"]["host"], config["mom"]["port"])
+    xbc.login( config["mom"]["publish_user"], config["mom"]["publish_password"] )
+    puts args
+    xbc.publish( "<key oid='#{args[0]}' contentMime='text/xml'/>", args[1] , "<qos></qos>" )
+    xbc.logout
+end
+  

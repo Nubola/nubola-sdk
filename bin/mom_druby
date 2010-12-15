@@ -1,0 +1,40 @@
+#!/usr/bin/ruby 
+
+$:.unshift(File.dirname(__FILE__) + '/../lib')
+
+require "adaptation"
+require "adaptation/mom"
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = "8080"
+
+# search mom configuration file.
+#   - first by specified parameter
+#   - second in /etc/adaptation (*nix systems)
+#   - third in the gem itself
+
+if File.exists?(File.dirname(__FILE__) + '/../configs/mom.yml')
+  file = File.dirname(__FILE__) + '/../configs/mom.yml'
+end
+
+if File.exists?('/etc/adaptation/mom.yml')
+  file = '/etc/adaptation/mom.yml'
+end
+
+if %w(--file -f).include? ARGV.first
+  file = ARGV[1]
+end
+
+mom = "druby"
+
+if file.nil?
+  config = {"mom" => {"host" => DEFAULT_HOST, "port" => DEFAULT_PORT, "topics" => "all"}}
+else
+  config = YAML::load(File.open(file))[mom]
+end
+
+Signal.trap("INT") { puts "Shutting down MOM server (#{mom})"; exit }
+
+mom_uri = "druby://#{config["mom"]["host"]}:#{config["mom"]["port"]}"
+mom = Adaptation::Mom::Mom.new mom_uri
+mom.start

@@ -1,0 +1,192 @@
+== Welcome to Adaptation
+
+Adaptation is a framework that tries to facilitate data interchange
+between applications. Applications send and receive xml messages through
+a message oriented middleware (<b>mom</b>) using a <b>publish/subscribe</b> pattern:
+
+Example:
+
+ Application A publishes messages on topic "messages from A", and all 
+ applications interested on reading messages from A subscribe to that topic.
+
+Adaptation focuses on facilitate building _adaptors_. _adaptors_ are programs
+that are executed for an application subscribed to a topic, when a message is 
+received on that topic.
+
+Adaptation is highly inspired by {Ruby on Rails}[http://rubyonrails.org] web
+framework, so _adaptors_ are built in a similar way that web apps are built
+using the RoR[http://rubyonrails.org] framework. 
+
+When building an _adaptor_, logic will be stored into Adaptation::Adaptor objects, and 
+mapping of xml data messages will be performed by Adaptation::Message objects.
+
+Adaptation can use ActiveRecord[http://api.rubyonrails.org/classes/ActiveRecord/Base.html]
+based models for data interaction with databases.
+
+
+== Installation
+
+Adaptation is available as a ruby gem, so the easiest way should be:
+
+  > gem install adaptation
+
+
+== Usage
+
+1. At the command prompt, start a new adaptation adaptor using the _adaptation_ command
+   and your adaptor name: 
+   
+     > adaptation myadaptor
+   
+   This will generate a an adaptor file tree under folder _myadaptor_.
+
+2. If no message oriented middleware has been already set, change directory into _myadaptor_ 
+   and start the <b>mom</b>:
+
+     > mom
+
+   This will start a <b>mom</b> in _localhost_ (default), listening on port <em>8080</em> (default).
+
+3. Subscribe your adaptor to the <b>mom</b>, so it will be executed when a message is received on
+   a topic your adaptor is interested in:
+
+     > script/subscribe
+
+   By default this will try to subscribe to a *mom* listening on <em>localhost:8080</em>, using port
+   <em>8081</em> to subscribe (subscribing means starting a new server that listens for 
+   message publication notifications). These values can be changed editing <em>config/mom.yml</em>. In <em>mom.yml</em> 
+   you can also specify wich topics your adaptor is interested in.
+
+4. Right now you should have a <b>mom</b>_ listening for messages on <em>localhost:8080</em>, and an _adaptor_
+   subscribed to that *mom* and listening on <em>localhost:8081</em>, and interested in all topics available.
+
+   This environment can be tested by executing the following from _myadaptor_ folder:
+
+     > ruby script/publish NEWS '<helloworld/>'
+
+   The previous command should publish de xml <em><helloworld/></em> message into topic _NEWS_ from the *mom*.
+   This message should be displayed in the subscriber terminal when delivered by the *mom*.
+   Nothing would be executed, because a _Helloworld_ message[link:../rdoc/classes/Adaptation/Message.html] to 
+   map this xml message and a _HelloworldAdaptor_[link:../rdoc/classes/Adaptation/Adaptor.html] to process it don't 
+   exist yet. Since these classes aren't implemented, Adaptation will pass the  message as a xml _String_ to the 
+   default _ApplicationAdaptor_ adaptor, but its _process_ method is  still empty, so nothing will happen. 
+
+   To see something happening the _process_ method in the default _ApplicationAdaptor_ could be implemented, 
+   editing file <em>myadaptor/app/adaptors/application.rb</em>:
+
+     class ApplicationAdaptor < Adaptation::Adaptor
+
+       def process message
+         logger.info "Received message #{message}"
+       end
+
+     end
+  
+   Now, if the previous <em><helloword/></em> message is published, that should be visible
+   in <em>log/development.log</em>.
+     
+   The other way this can be done is by creating _Helloworld_ Adaptation::Message class to
+   map the xml data:
+   
+     > ruby script/generate message helloworld
+         exists  app/messages/
+         exists  test/unit/
+         exists  test/fixtures/
+         create  app/messages/helloworld.rb
+         create  test/unit/helloworld_test.rb
+         create  test/fixtures/helloworld.xml
+
+   The file we care about right now is <em>app/messages/helloworld.rb</em>:
+
+     class Helloworld < Adaptation::Message
+     end
+
+   We can leave it like this by now, and proceed to generate the _HelloworldAdaptor_ Adaptation::Adaptor class:
+   
+     > ruby script/generate adaptor helloworld
+         exists  app/adaptors/
+         exists  test/functional/
+         create  app/adaptors/helloworld_adaptor.rb
+         create  test/functional/helloworld_adaptor_test.rb
+
+   and to edit <em>app/adaptors/helloworld_adaptor</em> to make something happen
+   when a message is received:
+
+     class HelloworldAdaptor < ApplicationAdaptor
+
+       def process helloworld
+         logger.info "Received message: #{helloworld.to_xml.to_s}"
+       end
+
+     end
+
+   We can notice that _helloworld_ variable is not a _String_ now, because Adaptation
+   has been able to map it to a Adaptation::Message object, and that the _HelloworldAdaptor_
+   inherits from _ApplicationAdaptor_, so functionality repeated in different _Adaptors_[link:../rdoc/classes/Adaptation/Adaptor.html]
+   can be placed in _ApplicationAdaptor_.
+   
+
+== Moms
+
+By default, Adaptation will try to use druby to execute the built-in Ruby *mom*. This
+*mom* is suitable for development, but not for production. For a production environment
+a more stable solution like Xmlblaster[http://www.xmlblaster.org] should be chosen. 
+
+Different message brokers can be configured in <em>config/mom.yml</em>, and example
+configuration for supported *moms* are present in the same file when an _adaptor_ is 
+generated with the <em>adaptation</em> command.
+
+When we want to publish/subscribe to a *mom* different than the default druby, we
+can do so by adding the <em>MOM=mom_type</em> option:
+  
+  > ruby script/subscribe MOM=xmlblaster
+  > ruby script/publish MOM=xmlblaster topic message
+
+
+== Description of an _adaptor_ file tree:
+
+app
+  Holds all the code that's specific to this particular adaptor.
+
+app/adaptors
+  Holds adaptors that should be named like messagename_adaptor.rb for
+  automated mapping. All adaptors should descend from Adaptation::Adaptor.
+
+app/messages
+  Holds messages that should be named like messagename.rb.
+  Messages descend from Adaptation::Message.
+
+app/models
+  Holds models that should be named like post.rb.
+  Most models will descend from ActiveRecord::Base.
+
+config
+  Configuration files for the Adaptation environment, the mom, the adapted application, 
+  the database, and other dependencies.
+
+db
+  Contains database related scripts.
+
+doc
+  This directory is where your adaptor documentation will be stored.
+
+lib
+  Application specific libraries. Basically, any kind of custom code that doesn't
+  belong under adaptors, models, or messages. 
+
+public
+  The directory available for calling the adaptor (contains dispatch.rb). 
+
+script
+  Helper scripts for automation and generation.
+
+test
+  Unit and functional tests along with fixtures. When using the script/generate scripts, template
+  test files will be generated for you and placed in this directory.
+
+
+== Debugging 
+<em>TODO: ruby script/console + ruby-debug</em>
+
+== Testing 
+<em>TODO</em>

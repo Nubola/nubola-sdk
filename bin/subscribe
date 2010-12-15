@@ -1,0 +1,91 @@
+#!/usr/bin/ruby 
+
+$:.unshift(File.dirname(__FILE__) + '/../lib')
+
+require "adaptation"
+
+args = ARGV
+#mom = "druby"
+mom = "xmlblaster"
+ARGV.each do |arg|
+  if arg[0..3] == "MOM="
+    mom = arg[4..arg.length]
+    args = ARGV.reject{|p| p == "MOM=#{mom}"}
+  end
+end
+
+require 'yaml'
+config = YAML::load(File.open("config/mom.yml"))[mom]
+
+puts config
+
+case mom
+  when "druby"
+    require 'adaptation/druby_subscriber'
+
+    mom_uri = "druby://#{config["mom"]["host"]}:#{config["mom"]["port"]}"
+    subscriber_uri = "druby://#{config["subscriber"]["host"]}:#{config["subscriber"]["port"]}"
+    topics = config["subscriber"]["topics"].gsub(" ", "").split(',')
+    
+    Signal.trap("INT") { puts "Shutting down subscriber (#{mom})"; exit }
+
+    oapdaemon = Adaptation::Mom::DrubySubscriber.new subscriber_uri, mom_uri, topics
+    oapdaemon.start
+
+  when "xmlblaster"
+    require 'adaptation/xmlblaster/xmlblaster_callback_client' 
+   
+    xbcc = XmlblasterCallbackClient.new(
+             config["mom"]["host"],
+             config["mom"]["port"],
+             config["subscriber"]["host"],
+             config["subscriber"]["port"],
+             config["subscriber"]["public_host"],
+             config["subscriber"]["public_port"],
+             Logger.new(STDOUT)
+             #Logger.new("#{ADAPTOR_ROOT}/log/subscriber.log")     
+           )
+
+    Signal.trap("INT") { 
+      puts "Shutting down subscriber (#{mom})" 
+      begin
+        xbcc.unsubscribe( 
+          "<key oid='#{topic}'/>",
+          "<qos><persistent/><initialUpdate>false</initialUpdate>
+           <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
+           <history numEntries='1'/></qos>"
+        )
+      rescue
+      end
+      xbcc.logout
+      exit 
+    }
+ 
+    user = config["subscriber"]["subscriber_user"].nil? ? config["subscriber"]["host"] : config["subscriber"]["subscriber_user"]
+    password = config["subscriber"]["subscriber_password"].nil? ? "empty" : config["subscriber"]["subscriber_password"]
+    xbcc.login(user, password)
+
+    topics = (config["subscriber"]["topics"].nil? or config["subscriber"]["topics"] == "all") ? nil : config["subscriber"]["topics"].gsub(" ","").split(',')
+    if topics.nil?
+      xbcc.subscribe(  
+        "<key oid='' queryType='XPATH'> /xmlBlaster/key[starts-with(@oid,'.')] </key>",
+        "<qos><persistent/><initialUpdate>false</initialUpdate>
+         <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
+         <history numEntries='1'/></qos>" 
+      )
+    else
+      topics.each do |topic|
+        xbcc.subscribe( 
+          "<key oid='#{topic}'/>", 
+          "<qos><persistent/><initialUpdate>false</initialUpdate>
+           <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
+           <history numEntries='1'/></qos>"
+        )
+      end
+    end
+
+    sleep
+
+  else
+    puts "Unknown MOM server type: #{mom}"
+end
