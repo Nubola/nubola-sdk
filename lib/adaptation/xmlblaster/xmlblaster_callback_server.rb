@@ -40,7 +40,23 @@ class XmlblasterCallbackServer
       if @callback_server then      
 
         @audit.debug( "MOM-CallBackServer: " + @callback_url )
-        
+
+        # TODO - for some reason xmlblaster sends me with
+        # <methodName>$default.update</methodName>
+        # instead of <methodName>update</methodName>
+        # so ... lets add this method handler too
+
+        @callback_server.add_handler("$default.ping") do |name, *args|
+          puts name
+          puts args
+          @callback_instance.ping( *args )
+        end
+        @callback_server.add_handler("$default.update") do |name, *args|
+          puts name
+          puts args
+          @callback_instance.update( *args )
+        end
+
         @callback_server.add_handler("ping") do |name, *args|
           @callback_instance.ping( *args )
         end

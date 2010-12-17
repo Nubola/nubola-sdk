@@ -40,34 +40,30 @@ module Adaptation
 
   class Base
 
+    cattr_accessor :logger
+
     def initialize 
-      
       Initializer.run
-
-      @@logger = Logger.new("#{ADAPTOR_ROOT}/log/#{ADAPTOR_ENV}.log")
-      ActiveRecord::Base.logger = @@logger
-      
-    end
-
-    def self.logger
-      @@logger
+      ActiveRecord::Base.logger = logger
     end
 
     def process(xml_message)
 
+      logger.debug "Adaptation::Base.process #{xml_message}"
+
       # dirty method to discover the message type
       # TODO: move to a module
-      message_type = xml_message[1..(xml_message.index(/(>| |\/)/) - 1)]
+      message_type = xml_message[1..(xml_message.index(/(>| |\/)/) - 1)] rescue nil
       adaptor = message = nil
  
-      message_class = Adaptation::Message.get_class_object(message_type.capitalize)
+      message_class = Adaptation::Message.get_class_object(message_type.capitalize) rescue nil
       message = message_class.nil? ? Adaptation::Message.new(xml_message) : message_class.new(xml_message)
         
-      adaptor_class = Adaptation::Adaptor.get_class_object("#{message_type.capitalize}Adaptor")    
+      adaptor_class = Adaptation::Adaptor.get_class_object("#{message_type.capitalize}Adaptor") rescue nil    
       adaptor = adaptor_class.nil? ? ApplicationAdaptor.new : adaptor_class.new rescue Adaptation::Adaptor.new
 
       unless message.valid?
-        @@logger.info "WARNING:Message doesn't validate!" 
+        logger.info "WARNING:Message doesn't validate!" 
         return
       end
 

@@ -11,6 +11,7 @@ module Adaptation
   class Adaptor
 
     def process message #:nodoc:
+      @message = message
     end
 
     # Returns the logger to output results in the current environment log file.
@@ -56,6 +57,24 @@ module Adaptation
 
     def self.get_class_object(adaptor_class) #:nodoc:
       Object.const_get(adaptor_class) rescue nil
+    end
+
+    private
+
+    # Extract the gid attribute from the message
+    #   Example:
+    #     message = <install gid="90".../>
+    #     returns "90" (String)
+    def gid
+      @message.gid
+    end
+
+    # Returns the message type as a donwcase String
+    #   Example:
+    #     message: <addhostresponse .../>
+    #     returns "addhostresponse"
+    def message_type
+      @message.to_hash.first[0]
     end
 
   end

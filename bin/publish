@@ -4,6 +4,12 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require "adaptation"
 
+logger = Logger.new(STDOUT)
+logger.level = Logger::DEBUG
+logger.debug "Created logger"
+logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
+Adaptation::Base.logger = logger
+
 args = ARGV
 #mom = "druby"
 mom = "xmlblaster"
@@ -27,13 +33,11 @@ case mom
     mom.publish ARGV[1], ARGV[0]
 
   when "xmlblaster"
-    require "rubygems"
-    require "adaptation"
     require "adaptation/xmlblaster/xmlblaster_client"
 
     xbc = XmlblasterClient.new(config["mom"]["host"], config["mom"]["port"])
     xbc.login( config["mom"]["publish_user"], config["mom"]["publish_password"] )
-    puts args
+    logger.info args
     xbc.publish( "<key oid='#{args[0]}' contentMime='text/xml'/>", args[1] , "<qos></qos>" )
     xbc.logout
 end

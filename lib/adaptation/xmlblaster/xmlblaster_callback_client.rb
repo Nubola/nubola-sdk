@@ -29,6 +29,13 @@ class XmlblasterCallbackClient < XmlblasterClient
       @audit.warn( "XMLBlasterCallbackClient: Error creating XMLRPC Server" )
       raise e
     end
+
+    if @callback_public_ip
+      @audit.info "MOM xmlBlaster #{@xmlblaster_ip}:#{@xmlblaster_port} <---> Public IP #{@callback_public_ip}:#{@callback_public_port} <-- NAT --> This host #{@callback_ip}:#{@callback_port}"
+    else
+      @audit.info "MOM xmlBlaster #{@xmlblaster_ip}:#{@xmlblaster_port} <---> This subscriber #{@callback_public_ip || @callback_ip}:#{@callback_public_port || @callback_port}"
+    end 
+
   end
 
   def login( username='guest', password='guest' )
@@ -53,8 +60,7 @@ class XmlblasterCallbackClient < XmlblasterClient
   def subscribe( xmlKey, qos )
     begin
       returnValue = @proxy.call("xmlBlaster.subscribe", @sessionId, xmlKey, qos )
-      puts "Subscribed to mom (xmlblaster at #{@xmlblaster_ip}:#{@xmlblaster_port}). Listening at #{@callback_public_ip || @callback_ip}:#{@callback_public_port || @callback_port}"
-      @audit.info( "==> ::SUBSCRIBE:: <==      Success subscribing with sessionID #{@sessionId}" )
+      @audit.debug( "==> ::SUBSCRIBE:: <==      Success subscribing with sessionID #{@sessionId}" )
     rescue  => e
       @audit.warn( "XMLBlasterClient: Error subscribing to MOM: #{e}" )
       raise e
@@ -65,7 +71,7 @@ class XmlblasterCallbackClient < XmlblasterClient
   def unsubscribe( xmlKey, qos )
     begin
       returnValue = @proxy.call("xmlBlaster.unSubscribe", @sessionId, xmlKey,  qos )
-      @audit.info( "==> ::UNSUBSCRIBE:: <==      Success unSubscribing with sessionID #{@sessionId}" )
+      @audit.debug( "==> ::UNSUBSCRIBE:: <==      Success unSubscribing with sessionID #{@sessionId}" )
     rescue  => e
       @audit.warn( "XMLBlasterClient: Error unsubscribing from MOM: #{e}" )
       raise e
@@ -77,7 +83,7 @@ class XmlblasterCallbackClient < XmlblasterClient
     key =args[0]
     content = args[1]
     qos = args[2]
-    @audit.info( "XMLBlasterCallbackClient: Received UPDATE." )
+    @audit.debug( "XMLBlasterCallbackClient: Received UPDATE." )
 
     begin
       qos_xml = REXML::Document.new args[2]
@@ -101,15 +107,14 @@ class XmlblasterCallbackClient < XmlblasterClient
     begin
       key_xml = REXML::Document.new key
       topic = key_xml.elements['key'].attributes["oid"]
-      @audit.debug( "Topic #{topic}" )
-      puts "-----------------------------------"
-      puts "Received message in topic: #{topic}"
-      puts "#{content}"
-      puts "-----------------------------------"
+      @audit.debug "-----------------------------------"
+      @audit.debug "Received message in topic: #{topic}"
+      @audit.debug "#{content}"
+      @audit.debug  "-----------------------------------"
       # process message
       Adaptation::Base.new.process content
     rescue => e
-      @audit.warn( "XMLBlasterCallbackClient: Could not access content of message." )
+      @audit.warn( "#{e}. XMLBlasterCallbackClient: Could not access content of message." )
     end   
 
     return "<qos><state>OK</state></qos>"

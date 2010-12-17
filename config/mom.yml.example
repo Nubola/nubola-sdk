@@ -1,0 +1,14 @@
+xmlblaster:
+  mom:
+    host:                82.103.128.69  # production IP
+    port:                8080           # production port
+    publish_user:                       # put your user here
+    publish_password:                   # put your password here
+  subscriber:
+    host:                127.0.0.1      # your local listening IP
+    port:                8081           # your local listening port
+    public_host:         is.my.adsl.ip  # your public IP (if you use NAT)
+    public_port:         8081           # your public port (if you use NAT) 
+    topics:              IMS, SSO       # the topics you want to subscribe to
+    subscriber_user:                    # put your user here
+    subscriber_password:                # put password here

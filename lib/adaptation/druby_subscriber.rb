@@ -55,7 +55,8 @@ module Adaptation
             while !@messages.empty?
               @messages.each do |message|         
                 if ( (@topics.include?(message[:topic])) or (@topics.include?("all")) )
-                  system("ruby public/dispatch.rb '#{message[:message]}'") 
+                  #system("ruby public/dispatch.rb '#{message[:message]}'") 
+                  Adaptation::Base.new.process message 
                 end
                 @messages.delete message
               end

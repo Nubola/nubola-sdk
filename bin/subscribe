@@ -4,6 +4,14 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require "adaptation"
 
+logger = Logger.new(STDOUT)
+logger.level = Logger::INFO
+logger.debug "Created logger"
+logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
+Adaptation::Base.logger = logger
+
+#Adaptation::Base.new.process "<login gid='dsf'>asdf</login>"
+
 args = ARGV
 #mom = "druby"
 mom = "xmlblaster"
@@ -17,8 +25,6 @@ end
 require 'yaml'
 config = YAML::load(File.open("config/mom.yml"))[mom]
 
-puts config
-
 case mom
   when "druby"
     require 'adaptation/druby_subscriber'
@@ -27,7 +33,7 @@ case mom
     subscriber_uri = "druby://#{config["subscriber"]["host"]}:#{config["subscriber"]["port"]}"
     topics = config["subscriber"]["topics"].gsub(" ", "").split(',')
     
-    Signal.trap("INT") { puts "Shutting down subscriber (#{mom})"; exit }
+    Signal.trap("INT") { logger.info "Shutting down subscriber (#{mom})"; exit }
 
     oapdaemon = Adaptation::Mom::DrubySubscriber.new subscriber_uri, mom_uri, topics
     oapdaemon.start
@@ -42,25 +48,9 @@ case mom
              config["subscriber"]["port"],
              config["subscriber"]["public_host"],
              config["subscriber"]["public_port"],
-             Logger.new(STDOUT)
-             #Logger.new("#{ADAPTOR_ROOT}/log/subscriber.log")     
+             logger
            )
 
-    Signal.trap("INT") { 
-      puts "Shutting down subscriber (#{mom})" 
-      begin
-        xbcc.unsubscribe( 
-          "<key oid='#{topic}'/>",
-          "<qos><persistent/><initialUpdate>false</initialUpdate>
-           <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
-           <history numEntries='1'/></qos>"
-        )
-      rescue
-      end
-      xbcc.logout
-      exit 
-    }
- 
     user = config["subscriber"]["subscriber_user"].nil? ? config["subscriber"]["host"] : config["subscriber"]["subscriber_user"]
     password = config["subscriber"]["subscriber_password"].nil? ? "empty" : config["subscriber"]["subscriber_password"]
     xbcc.login(user, password)
@@ -75,6 +65,7 @@ case mom
       )
     else
       topics.each do |topic|
+        logger.info "Subscribe '#{topic}' ..."
         xbcc.subscribe( 
           "<key oid='#{topic}'/>", 
           "<qos><persistent/><initialUpdate>false</initialUpdate>
@@ -84,8 +75,23 @@ case mom
       end
     end
 
+    Signal.trap('INT') { 
+      logger.info "Shutting down subscriber (#{mom})" 
+      begin
+        xbcc.unsubscribe( 
+          "<key oid='#{topic}'/>",
+          "<qos><persistent/><initialUpdate>false</initialUpdate>
+           <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
+           <history numEntries='1'/></qos>"
+        )
+      rescue
+      end
+      xbcc.logout
+      exit 
+    }
+ 
     sleep
 
   else
-    puts "Unknown MOM server type: #{mom}"
+    logger.error "Unknown MOM server type: #{mom}"
 end
