@@ -47,13 +47,10 @@ class XmlblasterCallbackServer
         # so ... lets add this method handler too
 
         @callback_server.add_handler("$default.ping") do |name, *args|
-          puts name
-          puts args
           @callback_instance.ping( *args )
         end
+
         @callback_server.add_handler("$default.update") do |name, *args|
-          puts name
-          puts args
           @callback_instance.update( *args )
         end
 

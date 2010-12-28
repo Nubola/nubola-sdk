@@ -42,12 +42,9 @@ module Adaptation
 
     cattr_accessor :logger
 
-    def initialize 
-      Initializer.run
-      ActiveRecord::Base.logger = logger
-    end
+    def self.process(xml_message)
 
-    def process(xml_message)
+      ActiveRecord::Base.logger = logger
 
       logger.debug "Adaptation::Base.process #{xml_message}"
 

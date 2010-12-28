@@ -1,55 +1,121 @@
-#!/usr/bin/ruby 
+#!/usr/bin/env ruby
+
+# == Synopsis
+#   Subscribes to a queue server and processess recived messages
+#
+# == Examples
+#   This command calls "cat" for each message recibed
+#     subscribe --exec cat
+#
+# == Usage
+#   subscribe [options]
+#   For help use: subscribe -h
+#
+# == Options
+#   -h, --help          Displays help message
+#   -v, --version       Display the version, then exit
+#   -t, --mom TYPE      MOM type. Default: xmlblaster
+#       --exec          Command to call when a messages are recived
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
+require 'optparse'
+require 'ostruct'
+require 'rdoc/usage'
 require "adaptation"
-
-logger = Logger.new(STDOUT)
-logger.level = Logger::INFO
-logger.debug "Created logger"
-logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
-Adaptation::Base.logger = logger
-
-#Adaptation::Base.new.process "<login gid='dsf'>asdf</login>"
-
-args = ARGV
-#mom = "druby"
-mom = "xmlblaster"
-ARGV.each do |arg|
-  if arg[0..3] == "MOM="
-    mom = arg[4..arg.length]
-    args = ARGV.reject{|p| p == "MOM=#{mom}"}
-  end
-end
-
 require 'yaml'
-config = YAML::load(File.open("config/mom.yml"))[mom]
+require 'adaptation/xmlblaster/xmlblaster_callback_client'
 
-case mom
-  when "druby"
+class SubscribeApp
+  VERSION = '0.1'
+
+  attr_reader :options, :logger, :config
+
+  def initialize(arguments, stdin)
+    @arguments = arguments
+    @stdin = stdin
+    # Set defaults
+    @options = OpenStruct.new
+    @options.mom = 'xmlblaster'
+    # Set logger
+    @logger = Logger.new(STDOUT)
+    @logger.level = Logger::INFO
+    @logger.debug "Created logger"
+    @logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
+    Adaptation::Base.logger = logger
+ end
+
+  def run
+    if parsed_options? && arguments_valid?
+      process_arguments
+      # Read mom.yml config
+      @config = YAML::load(File.open("config/mom.yml"))[options.mom]
+      process_command
+    else
+      output_usage
+    end
+  end
+
+  protected
+
+  def parsed_options?
+    # Specify options
+    opts = OptionParser.new
+    opts.on('-v', '--version')    { output_version ; exit 0 }
+    opts.on('-h', '--help')       { output_help }
+    opts.on('-t', '--mom-type MOMTYPE') { |a| @options.mom = a }
+    opts.on('--exec COMMAND')           { |a| @options.exec = a }
+    #opts.on('--execdir DIR')            { |a| @options.execdir = a }
+    opts.parse!(@arguments) rescue return false
+    true
+  end
+
+  # True if required arguments were provided
+  def arguments_valid?
+    true if @arguments.length == 0
+  end
+
+  # Setup the arguments
+  def process_arguments
+  end
+
+  def output_help
+    output_version
+    RDoc::usage() #exits app
+  end
+
+  def output_usage
+    RDoc::usage('usage') # gets usage from comments above
+  end
+
+  def output_version
+    puts "#{File.basename(__FILE__)} version #{VERSION}"
+  end
+
+  def druby_subscribe
     require 'adaptation/druby_subscriber'
 
     mom_uri = "druby://#{config["mom"]["host"]}:#{config["mom"]["port"]}"
     subscriber_uri = "druby://#{config["subscriber"]["host"]}:#{config["subscriber"]["port"]}"
     topics = config["subscriber"]["topics"].gsub(" ", "").split(',')
-    
-    Signal.trap("INT") { logger.info "Shutting down subscriber (#{mom})"; exit }
+
+    Signal.trap("INT") { logger.info "Shutting down subscriber (#{options.mom})"; exit }
 
     oapdaemon = Adaptation::Mom::DrubySubscriber.new subscriber_uri, mom_uri, topics
     oapdaemon.start
+  end
 
-  when "xmlblaster"
-    require 'adaptation/xmlblaster/xmlblaster_callback_client' 
-   
+  def xmlblaster_subscribe
+
     xbcc = XmlblasterCallbackClient.new(
-             config["mom"]["host"],
-             config["mom"]["port"],
-             config["subscriber"]["host"],
-             config["subscriber"]["port"],
-             config["subscriber"]["public_host"],
-             config["subscriber"]["public_port"],
-             logger
-           )
+      config["mom"]["host"],
+      config["mom"]["port"],
+      config["subscriber"]["host"],
+      config["subscriber"]["port"],
+      config["subscriber"]["public_host"],
+      config["subscriber"]["public_port"],
+      logger
+    )
 
     user = config["subscriber"]["subscriber_user"].nil? ? config["subscriber"]["host"] : config["subscriber"]["subscriber_user"]
     password = config["subscriber"]["subscriber_password"].nil? ? "empty" : config["subscriber"]["subscriber_password"]
@@ -57,41 +123,55 @@ case mom
 
     topics = (config["subscriber"]["topics"].nil? or config["subscriber"]["topics"] == "all") ? nil : config["subscriber"]["topics"].gsub(" ","").split(',')
     if topics.nil?
-      xbcc.subscribe(  
-        "<key oid='' queryType='XPATH'> /xmlBlaster/key[starts-with(@oid,'.')] </key>",
-        "<qos><persistent/><initialUpdate>false</initialUpdate>
+      xbcc.subscribe(
+                     "<key oid='' queryType='XPATH'> /xmlBlaster/key[starts-with(@oid,'.')] </key>",
+                     "<qos><persistent/><initialUpdate>false</initialUpdate>
          <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
-         <history numEntries='1'/></qos>" 
-      )
+         <history numEntries='1'/></qos>"
+                    )
     else
       topics.each do |topic|
         logger.info "Subscribe '#{topic}' ..."
-        xbcc.subscribe( 
-          "<key oid='#{topic}'/>", 
-          "<qos><persistent/><initialUpdate>false</initialUpdate>
+        xbcc.subscribe(
+                       "<key oid='#{topic}'/>",
+                       "<qos><persistent/><initialUpdate>false</initialUpdate>
            <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
            <history numEntries='1'/></qos>"
-        )
+                      )
       end
     end
 
-    Signal.trap('INT') { 
-      logger.info "Shutting down subscriber (#{mom})" 
+    Signal.trap('INT') {
+      logger.info "Shutting down subscriber (#{options.mom})"
       begin
-        xbcc.unsubscribe( 
-          "<key oid='#{topic}'/>",
-          "<qos><persistent/><initialUpdate>false</initialUpdate>
+        xbcc.unsubscribe(
+                         "<key oid='#{topic}'/>",
+                         "<qos><persistent/><initialUpdate>false</initialUpdate>
            <duplicateUpdates>false</duplicateUpdates><multiSubscribe>false</multiSubscribe>
            <history numEntries='1'/></qos>"
-        )
+                        )
       rescue
       end
       xbcc.logout
-      exit 
+      exit
     }
- 
-    sleep
 
-  else
-    logger.error "Unknown MOM server type: #{mom}"
+    sleep
+  end
+
+  def process_command
+    ApplicationAdaptor.options = options
+    case options.mom
+    when 'druby'
+      druby_subscribe
+    when 'xmlblaster'
+      xmlblaster_subscribe
+    else
+      logger.error "Unknown MOM server type: #{options.mom}"
+    end
+  end
 end
+
+app = SubscribeApp.new(ARGV, STDIN)
+app.run
+

@@ -49,11 +49,14 @@ module Adaptation
     @@classes_with_brothers = []
     cattr_reader :classes_with_brothers
     cattr_reader :objects
+
+    attr_accessor :original
     
     include Validateable
 
     # Constructor. Transforms xml passsed as a <em>String</em> to an object wich methods map the input xml elements and attributes.
     def initialize xml_string
+      @original = xml_string
       @hash_with_root = XmlSimple.xml_in("<adaptation_wrapper>" + xml_string + "</adaptation_wrapper>", 'ForceArray' => false, 'AttrPrefix' => true) 
  
       first_value = @hash_with_root.values.first

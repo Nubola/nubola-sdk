@@ -216,7 +216,7 @@ class ActiveSupport::TestCase
       File.delete mom_mock_file
     end
 
-    Adaptation::Base.new.process message_xml
+    Adaptation::Base.process message_xml
 
   end
 

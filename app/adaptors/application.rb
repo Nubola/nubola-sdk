@@ -1,13 +1,26 @@
-# TODO - NOTE
-# This is an example implementation
-# It just logs the message
+# This adapter is used by bin/subscribe 
+
+require 'open3'
 
 class ApplicationAdaptor < Adaptation::Adaptor
 
+  cattr_accessor :options
+
   def process(message)
     super message
+
     logger.info "Update of type '#{message_type}' for gid '#{gid}'"
-    logger.info "message = #{message.to_xml}"
+
+    if options.exec
+      logger.debug "exec '#{options.exec}' ... "
+      Open3.popen3(options.exec) do |stdin, stdout, stderr|
+        stdin.puts message.original
+        stdin.close
+        stdout.each do |l|
+          logger.debug "output = #{l}"
+        end
+      end
+    end
   end
 
 end

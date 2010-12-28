@@ -30,7 +30,12 @@ Usage
 
 Subscribe to MOM. It subscribes to all the topics listed in config/mom.yml.
 
-  bin/subscribe 
+  bin/subscribe
+
+You can call a command for each recived message. The message will be writen in
+the stdin of the program.
+
+  bin/subscribe --exec PROGRAM 
 
 Publish to MOM. The first parameter is the topic and the second is the message.
 

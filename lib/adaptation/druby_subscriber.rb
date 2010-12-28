@@ -56,7 +56,7 @@ module Adaptation
               @messages.each do |message|         
                 if ( (@topics.include?(message[:topic])) or (@topics.include?("all")) )
                   #system("ruby public/dispatch.rb '#{message[:message]}'") 
-                  Adaptation::Base.new.process message 
+                  Adaptation::Base.process message 
                 end
                 @messages.delete message
               end

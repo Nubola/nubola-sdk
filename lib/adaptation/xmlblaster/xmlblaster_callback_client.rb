@@ -5,7 +5,7 @@ class XmlblasterCallbackClient < XmlblasterClient
 
   attr_reader :callback_server
 
-  def initialize( xmlblaster_ip = nil, xmlblaster_port = "8080", callback_ip = "127.0.0.1", callback_port = "8081", callback_public_ip = nil, callback_public_port = nil, audit = nil)
+  def initialize( xmlblaster_ip = nil, xmlblaster_port = "8080", callback_ip = "127.0.0.1", callback_port = "8081", callback_public_ip = nil, callback_public_port = nil, audit = nil )
     super xmlblaster_ip, xmlblaster_port, audit
     @xmlblaster_ip = xmlblaster_ip
     @xmlblaster_port = xmlblaster_port
@@ -112,7 +112,7 @@ class XmlblasterCallbackClient < XmlblasterClient
       @audit.debug "#{content}"
       @audit.debug  "-----------------------------------"
       # process message
-      Adaptation::Base.new.process content
+      Adaptation::Base.process content
     rescue => e
       @audit.warn( "#{e}. XMLBlasterCallbackClient: Could not access content of message." )
     end   
