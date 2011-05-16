@@ -66,7 +66,7 @@ class XmlblasterClient
   def logout
     begin
       returnValue = @proxy.call("authenticate.logout", @sessionId)
-      @audit.info( "==> ::LOGOUT:: <==      Success with sessionID #{@sessionId}, return Value: #{returnValue.to_s}" )
+      @audit.debug( "==> ::LOGOUT:: <==      Success with sessionID #{@sessionId}, return Value: #{returnValue.to_s}" )
     rescue  => e
       @audit.warn( "XMLBlasterClient: Error logging out: #{e}" )
       raise e

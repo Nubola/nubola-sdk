@@ -9,7 +9,7 @@ class ApplicationAdaptor < Adaptation::Adaptor
   def process(message)
     super message
 
-    logger.info "Update of type '#{message_type}' for gid '#{gid}'"
+    logger.debug "Update of type '#{message_type}' for gid '#{gid}'"
 
     if options.exec
       logger.debug "exec '#{options.exec}' ... "

@@ -13,7 +13,8 @@
 #
 # == Options
 #   -h, --help          Displays help message
-#   -v, --version       Display the version, then exit
+#   -V, --version       Display the version, then exit
+#   -v, --verbose       Turn on verbose output 
 #   -t, --mom TYPE      MOM type. Default: xmlblaster
 #       --exec          Command to call when a messages are recived
 
@@ -37,17 +38,17 @@ class SubscribeApp
     # Set defaults
     @options = OpenStruct.new
     @options.mom = 'xmlblaster'
-    # Set logger
-    @logger = Logger.new(STDOUT)
-    @logger.level = Logger::INFO
-    @logger.debug "Created logger"
-    @logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
-    Adaptation::Base.logger = logger
  end
 
   def run
     if parsed_options? && arguments_valid?
       process_arguments
+      # Set logger
+      @logger = Logger.new(STDOUT)
+      @logger.level = options.verbose ? Logger::DEBUG : Logger::INFO
+      @logger.debug "Created logger"
+      @logger.debug "Adaptation version = #{Adaptation::VERSION::STRING}"
+      Adaptation::Base.logger = logger
       # Read mom.yml config
       @config = YAML::load(File.open("config/mom.yml"))[options.mom]
       process_command
@@ -61,7 +62,8 @@ class SubscribeApp
   def parsed_options?
     # Specify options
     opts = OptionParser.new
-    opts.on('-v', '--version')    { output_version ; exit 0 }
+    opts.on('-V', '--version')    { output_version ; exit 0 }
+    opts.on('-v', '--verbose')    { |a| @options.verbose = true }
     opts.on('-h', '--help')       { output_help }
     opts.on('-t', '--mom-type MOMTYPE') { |a| @options.mom = a }
     opts.on('--exec COMMAND')           { |a| @options.exec = a }

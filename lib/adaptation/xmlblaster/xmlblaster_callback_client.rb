@@ -107,14 +107,10 @@ class XmlblasterCallbackClient < XmlblasterClient
     begin
       key_xml = REXML::Document.new key
       topic = key_xml.elements['key'].attributes["oid"]
-      @audit.debug "-----------------------------------"
-      @audit.debug "Received message in topic: #{topic}"
-      @audit.debug "#{content}"
-      @audit.debug  "-----------------------------------"
-      # process message
+      @audit.info "=> Topic '#{topic}' received '#{content}'."
       Adaptation::Base.process content
     rescue => e
-      @audit.warn( "#{e}. XMLBlasterCallbackClient: Could not access content of message." )
+      @audit.debug( "#{e}. XMLBlasterCallbackClient: Could not access content of message." )
     end   
 
     return "<qos><state>OK</state></qos>"
