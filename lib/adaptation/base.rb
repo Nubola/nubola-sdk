@@ -48,16 +48,22 @@ module Adaptation
 
       logger.debug "Adaptation::Base.process #{xml_message}"
 
-      # dirty method to discover the message type
-      # TODO: move to a module
-      message_type = xml_message[1..(xml_message.index(/(>| |\/)/) - 1)] rescue nil
+      # if xml_message is '<login gid="1234_test" id="ASDF" />'
+      # then message_type is 'login'
+      if xml_message =~ /<(\S+)/
+        message_type = $1.capitalize
+      end
       adaptor = message = nil
  
-      message_class = Adaptation::Message.get_class_object(message_type.capitalize) rescue nil
+      message_class = Adaptation::Message.get_class_object(message_type) rescue nil
+      logger.debug "message_class = #{message_class ? message_class : 'Adaptation::Message'}" 
+
       message = message_class.nil? ? Adaptation::Message.new(xml_message) : message_class.new(xml_message)
-        
-      adaptor_class = Adaptation::Adaptor.get_class_object("#{message_type.capitalize}Adaptor") rescue nil    
-      adaptor = adaptor_class.nil? ? ApplicationAdaptor.new : adaptor_class.new rescue Adaptation::Adaptor.new
+
+      adaptor_class = Adaptation::Adaptor.get_class_object("#{message_type}Adaptor") rescue nil    
+      logger.debug "adaptor_class = #{adaptor_class ? adaptor_class : 'AdaptationAdaptor'}" 
+
+      adaptor = adaptor_class.nil? ? ApplicationAdaptor.new : adaptor_class.new rescue AdaptationAdaptor.new
 
       unless message.valid?
         logger.info "WARNING:Message doesn't validate!" 
