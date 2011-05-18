@@ -11,7 +11,7 @@ class ApplicationAdaptor < Adaptation::Adaptor
 
     logger.debug "Update of type '#{message_type}' for gid '#{gid}'"
 
-    if options.exec
+    if options && options.exec
       logger.debug "exec '#{options.exec}' ... "
       Open3.popen3(options.exec) do |stdin, stdout, stderr|
         stdin.puts message.original

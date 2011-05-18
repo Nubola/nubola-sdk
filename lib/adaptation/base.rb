@@ -44,6 +44,7 @@ module Adaptation
 
     def self.process(xml_message)
 
+      Adaptation::Base.logger = Logger.new(STDOUT) if logger.nil?
       ActiveRecord::Base.logger = logger
 
       logger.debug "Adaptation::Base.process #{xml_message}"

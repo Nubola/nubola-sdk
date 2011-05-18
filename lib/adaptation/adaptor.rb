@@ -10,6 +10,8 @@ module Adaptation
 # 
   class Adaptor
 
+    attr_reader :message
+
     def process message #:nodoc:
       @message = message
     end
@@ -59,8 +61,6 @@ module Adaptation
       Object.const_get(adaptor_class) rescue nil
     end
 
-    private
-
     # Extract the gid attribute from the message
     #   Example:
     #     message = <install gid="90".../>
@@ -74,7 +74,7 @@ module Adaptation
     #     message: <addhostresponse .../>
     #     returns "addhostresponse"
     def message_type
-      @message.to_hash.first[0]
+      @message.message_type if @message
     end
 
   end

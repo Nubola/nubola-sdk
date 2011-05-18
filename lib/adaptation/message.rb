@@ -208,6 +208,12 @@ module Adaptation
       @hash_with_root
     end
 
+    def message_type
+      if original =~ /<(\S+)/
+        $1
+      end
+    end
+
     private
     
     def end_of_tree?(v) #:nodoc:
