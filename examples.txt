@@ -1,0 +1,20 @@
+EXAMPLES
+
+* Respond to an install
+
+Message:
+
+<install original_host="saas.hosts.nubola-saas.com" gid="301" host="saas.hosts.nubola-saas.com"><applications><app id="geslab11"></app></applications></install>
+
+Response:
+
+./bin/publish IMS '<installresponse original_host="saas.hosts.nubola-saas.com" gid="301" host="saas.hosts.nubola-saas.com"><applications><app id="geslab11"><status code="INSTALL_OK">Success installing/updating geslab11</status></app></applications></installresponse>'
+
+
+* Respond to adduser
+
+<adduser gid="301" id="lluis"><name>Name</name><surname>Surname</surname><email>email@email.tld</email><telephone>123456789</telephone><mobile></mobile><applications><app id="geslab11"></app></applications></adduser>
+
+Response:
+
+./bin/publish IMS '<adduserresponse gid="301" id="lluis"><applications><app id="geslab11"><status code="ADDUSER_OK">Success adding/updating user</status></app></applications></adduserresponse>'
