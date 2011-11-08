@@ -23,4 +23,8 @@ class ApplicationAdaptor < Adaptation::Adaptor
     end
   end
 
+  def cif
+    @message.cif
+  end
+
 end
